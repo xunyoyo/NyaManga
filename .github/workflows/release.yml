@@ -88,7 +88,12 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: NyaManga-*
+          merge-multiple: true
           path: artifacts
+
+      - name: List artifacts
+        run: ls -R artifacts || true
 
       - name: Create release
         uses: softprops/action-gh-release@v2
