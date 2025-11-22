@@ -1,0 +1,19 @@
+[project]
+name = "nyamanga"
+version = "0.1.0"
+description = "Manga typesetting helpers for nano-banana-2 via ephone.chat / OpenAI-compatible APIs"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [{ name = "xunyoyo" }]
+dependencies = [
+    "requests>=2.31.0",
+    # Desktop/web extras included so Flet won't try auto-install.
+    "flet[all]==0.28.3",
+]
+
+[project.scripts]
+nyamanga = "nyamanga.cli:main"
+
+[tool.uv]
+package = true

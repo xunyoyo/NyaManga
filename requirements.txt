@@ -1,0 +1,5 @@
+# Synced with pyproject.toml; regenerate via:
+#   uv export --format=requirements-txt > requirements.txt
+requests>=2.31.0
+flet[all]==0.28.3
+flet
