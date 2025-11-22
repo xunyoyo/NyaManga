@@ -1,5 +1,6 @@
 import flet as ft
 import os
+import base64
 from pathlib import Path
 from typing import Optional
 import threading
@@ -44,6 +45,9 @@ TRANSLATIONS = {
         "output_group": "输出",
         "path_input": "手动输入图片路径",
         "load_path": "加载路径",
+        "output_folder": "保存文件夹",
+        "select_output_folder": "选择保存位置",
+        "saved_to": "已保存至: ",
     },
     "en": {
         "app_title": "NyaManga UI",
@@ -80,6 +84,9 @@ TRANSLATIONS = {
         "output_group": "Output",
         "path_input": "Manual image path",
         "load_path": "Load path",
+        "output_folder": "Output Folder",
+        "select_output_folder": "Select Output Folder",
+        "saved_to": "Saved to: ",
     }
 }
 
@@ -182,6 +189,10 @@ def main(page: ft.Page):
     loc_select_folder_btn = ft.ElevatedButton(icon="folder_open")
     loc_image_dropdown = ft.Dropdown(visible=False, width=400)
     loc_manual_btn = ft.IconButton(icon="edit")
+    
+    loc_output_path_display = ft.Text(value="", italic=True, size=12, color="grey")
+    loc_output_dir_picker = ft.FilePicker()
+    loc_select_output_btn = ft.ElevatedButton(icon="save_alt")
 
     # Rewrite Fields
     rw_source = ft.TextField(multiline=True, min_lines=3)
@@ -237,6 +248,11 @@ def main(page: ft.Page):
         loc_extra_prompt.label = T("extra_prompt")
         loc_run_btn.text = T("run_localize")
         loc_manual_btn.tooltip = T("manual_input")
+        loc_select_output_btn.text = T("select_output_folder")
+        if loc_output_folder:
+             loc_output_path_display.value = f"{T('output_folder')}: {loc_output_folder}"
+        else:
+             loc_output_path_display.value = ""
         
         # Rewrite
         rw_source.label = T("source_text")
@@ -262,7 +278,17 @@ def main(page: ft.Page):
 
     # Localize Logic
     loc_selected_file: Optional[str] = None
+    loc_output_folder: Optional[str] = None
     loc_images = []
+
+    def loc_on_output_folder_picked(e: ft.FilePickerResultEvent):
+        nonlocal loc_output_folder
+        if e.path:
+            loc_output_folder = e.path
+            loc_output_path_display.value = f"{T('output_folder')}: {loc_output_folder}"
+            page.update()
+
+    loc_output_dir_picker.on_result = loc_on_output_folder_picked
 
     def set_selected_image(path: str):
         nonlocal loc_selected_file
@@ -316,6 +342,8 @@ def main(page: ft.Page):
         page.overlay.append(loc_file_picker)
     if loc_dir_picker not in page.overlay:
         page.overlay.append(loc_dir_picker)
+    if loc_output_dir_picker not in page.overlay:
+        page.overlay.append(loc_output_dir_picker)
     page.update()
     def on_select_file_click(_):
         try:
@@ -331,6 +359,7 @@ def main(page: ft.Page):
 
     loc_select_btn.on_click = on_select_file_click
     loc_select_folder_btn.on_click = on_select_folder_click
+    loc_select_output_btn.on_click = lambda _: loc_output_dir_picker.get_directory_path()
 
     def toggle_manual_input(e):
         is_visible = loc_image_path_input.visible
@@ -374,7 +403,20 @@ def main(page: ft.Page):
                 loc_result_image.src_base64 = result.edited_image_b64
                 loc_result_image.visible = True
                 loc_result_text.value = f"{T('result')}: {result.rewritten_text or '[auto]'}"
-                show_snack(T("complete"))
+                
+                if loc_output_folder:
+                    try:
+                        original_path = Path(current_file)
+                        new_filename = f"{original_path.stem}_localized{original_path.suffix}"
+                        save_path = Path(loc_output_folder) / new_filename
+                        
+                        with open(save_path, "wb") as f:
+                            f.write(base64.b64decode(result.edited_image_b64))
+                        show_snack(f"{T('complete')} {T('saved_to')}{save_path.name}")
+                    except Exception as save_ex:
+                        show_error(f"Save failed: {save_ex}")
+                else:
+                    show_snack(T("complete"))
             except Exception as ex:
                 show_error(str(ex))
             finally:
@@ -469,6 +511,7 @@ def main(page: ft.Page):
                             ft.Row([loc_target_lang, loc_tone]), # Row 1
                             ft.Row([loc_bubble_hint], expand=True), # Row 2 (Full width)
                             loc_extra_prompt,
+                            ft.Row([loc_select_output_btn, ft.Container(loc_output_path_display, padding=ft.padding.only(left=10), expand=True)]),
                             ft.Row([loc_run_btn], alignment=ft.MainAxisAlignment.END),
                             loc_progress
                         ]),
