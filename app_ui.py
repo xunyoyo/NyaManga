@@ -80,7 +80,7 @@ class AppState:
         self.api_key = os.environ.get("NYAMANGA_API_KEY") or os.environ.get("EPHONE_API_KEY") or ""
         self.base_url = os.environ.get("NYAMANGA_BASE_URL", "https://api.ephone.chat/v1")
         self.chat_model = os.environ.get("NYAMANGA_CHAT_MODEL", "nano-banana-2")
-        self.image_model = os.environ.get("NYAMANGA_IMAGE_MODEL", "gpt-image-1")
+        self.image_model = os.environ.get("NYAMANGA_IMAGE_MODEL", "nano-banana-2")
         self.pipeline: Optional[TypesettingPipeline] = None
         self.ui_lang = "zh"  # Default to Chinese
 

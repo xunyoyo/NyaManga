@@ -19,7 +19,7 @@ source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
 
 ## 环境变量
 - `NYAMANGA_API_KEY`（或 `EPHONE_API_KEY` / `OPENAI_API_KEY`）：ephone.chat 的 key
-- 可选：`NYAMANGA_BASE_URL`（默认 `https://api.ephone.chat/v1`）、`NYAMANGA_CHAT_MODEL`、`NYAMANGA_IMAGE_MODEL`
+- 可选：`NYAMANGA_BASE_URL`（默认 `https://api.ephone.chat/v1`）、`NYAMANGA_CHAT_MODEL`、`NYAMANGA_IMAGE_MODEL`（默认 `nano-banana-2`）
 
 ## 命令行快速用（uv）
 ```bash

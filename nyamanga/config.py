@@ -12,7 +12,7 @@ class ApiConfig:
     base_url: str = DEFAULT_BASE_URL
     chat_model: str = "nano-banana-2"
     image_model: str = "nano-banana-2"
-    request_timeout: float = 30.0
+    request_timeout: float = 120.0
 
     @classmethod
     def from_env(cls) -> "ApiConfig":
