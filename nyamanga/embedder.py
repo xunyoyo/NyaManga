@@ -80,6 +80,37 @@ class MangaEmbedder:
         image_b64 = _first_b64_image(resp)
         return EmbedResult(image_b64=image_b64, raw_response=resp)
 
+    def auto_localize(
+        self,
+        image_path: Path,
+        target_language: str = "zh",
+        bubble_hint: Optional[str] = None,
+        mask_path: Optional[Path] = None,
+        style_hint: Optional[str] = None,
+    ) -> EmbedResult:
+        """
+        Ask the image model to read existing dialogue and replace it with a
+        translation/typeset version directly (no separate text input).
+        """
+        placement = (
+            f"Focus on balloons: {bubble_hint}. " if bubble_hint else "Use existing speech balloons. "
+        )
+        prompt = (
+            f"{placement}"
+            f"Read all speech/text in the image, translate to {target_language}, "
+            "and replace with natural, concise manga typesetting. "
+            "Preserve art, faces, and backgrounds; avoid redraw artifacts. "
+            f"{style_hint or 'Clean, legible, balanced layout.'}"
+        )
+        resp = self.client.edit_image(
+            image_path=image_path,
+            prompt=prompt,
+            mask_path=mask_path,
+            response_format="b64_json",
+        )
+        image_b64 = _first_b64_image(resp)
+        return EmbedResult(image_b64=image_b64, raw_response=resp)
+
     def _build_prompt(self, text: str, bubble_hint: Optional[str], style_hint: str) -> str:
         placement = (
             f"Place the text inside speech balloons: {bubble_hint}. "
