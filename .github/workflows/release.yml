@@ -10,6 +10,10 @@ on:
         description: "Ref to build (branch/tag/commit)"
         default: ""
         required: false
+      create_release:
+        description: "Also publish a GitHub release (uses downloaded artifacts)"
+        default: "false"
+        required: false
 
 permissions:
   contents: write
@@ -73,7 +77,9 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.create_release == 'true')
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -84,5 +90,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
+          draft: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
