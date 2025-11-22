@@ -65,9 +65,10 @@ uv run flet pack app_ui.py --name NyaManga
 
 ### CI/CD 自动打包发布
 - 已提供 GitHub Actions 工作流 `.github/workflows/release.yml`：
-  - 触发：推送 `v*` 标签时自动在 macOS/Windows/Linux 上用 `uv sync` + `flet pack --onedir` 构建。
-  - 生成的二进制（压缩包）会作为 release 资产上传。
-- 使用方法：本地打 tag 并推送：`git tag v0.1.0 && git push origin v0.1.0`，等待 Actions 完成后在 Releases 页面下载对应平台包。
+  - 自动：推送 `v*` 标签时在 macOS/Windows/Linux 上用 `uv sync` + `flet pack --onedir` 构建，并上传到对应 release。
+  - 手动：在 GitHub Actions 页面手动触发 `build-release` 工作流（可选指定 ref），会生成三平台构建并产出 artifacts（不自动发 release）。
+- 自动发布：本地打 tag 并推送：`git tag v0.1.0 && git push origin v0.1.0`，等待 Actions 完成后在 Releases 页面下载。
+- 手动构建：Actions 页面点击 “Run workflow”，选择分支/commit，等待构建后在 workflow run 的 Artifacts 下载对应平台包。
 
 ### UI 对接面向接口
 - `MangaEmbedder.rewrite_dialogue(text, target_language, tone)`：仅返回改写后的文本
