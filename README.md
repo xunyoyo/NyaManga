@@ -19,6 +19,9 @@ uv run flet pack app_ui.py --name NyaManga --onedir # Windows / Linux 推荐
 ### CI/CD 自动打包发布
 - 已提供 GitHub Actions 工作流 `.github/workflows/release.yml`：
   - 自动：推送 `v*` 标签时在 macOS/Windows/Linux 上用 `uv sync` + `flet pack --onedir` 构建，并上传到对应 release。
-  - 手动：在 GitHub Actions 页面手动触发 `build-release` 工作流（可选指定 ref），会生成三平台构建并产出 artifacts（不自动发 release）。
+  - 手动：在 GitHub Actions 页面手动触发 `build-release`（可选 ref），默认仅产出 artifacts；如勾选 `create_release=true` 则会发布一个 draft release 并附上三平台包。
 - 自动发布：本地打 tag 并推送：`git tag v0.1.0 && git push origin v0.1.0`，等待 Actions 完成后在 Releases 页面下载。
-- 手动构建：Actions 页面点击 “Run workflow”，选择分支/commit，等待构建后在 workflow run 的 Artifacts 下载对应平台包。
+- 手动构建/发布：
+  1) Actions -> `build-release` -> “Run workflow”，ref 留空或选分支/commit。
+  2) 只要 artifacts：保持 `create_release=false`，在 workflow run 页面下载。
+  3) 想要发布 draft release：把 `create_release` 设为 `true`，等待完成后在 Releases 页面找到 draft，确认后可编辑/发布。
