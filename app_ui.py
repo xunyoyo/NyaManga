@@ -1,5 +1,4 @@
 import flet as ft
-import base64
 import os
 from pathlib import Path
 from typing import Optional
@@ -156,8 +155,9 @@ def main(page: ft.Page):
     )
 
     # Localize Fields
-    loc_image_path = ft.Text(italic=True)
-    loc_source_text = ft.TextField(multiline=True, min_lines=3)
+    loc_image_path_display = ft.Text(italic=True, size=12, color="grey")
+    loc_image_path_input = ft.TextField(visible=False, expand=True, height=40, content_padding=10, text_size=12)
+    
     loc_target_lang = ft.Dropdown(
         value="zh",
         options=[
@@ -170,13 +170,18 @@ def main(page: ft.Page):
     )
     loc_tone = ft.TextField(value="friendly manga voice", expand=True)
     loc_bubble_hint = ft.TextField(value="")
-    loc_run_btn = ft.ElevatedButton(icon="play_arrow")
+    loc_extra_prompt = ft.TextField(multiline=True, min_lines=2)
+    loc_run_btn = ft.ElevatedButton(icon="play_arrow", style=ft.ButtonStyle(color="white", bgcolor="indigo"))
     loc_preview_image = ft.Image(src="", visible=False, height=400, fit=ft.ImageFit.CONTAIN)
     loc_result_image = ft.Image(src_base64="", visible=False, height=400, fit=ft.ImageFit.CONTAIN)
     loc_result_text = ft.Text("", selectable=True)
     loc_progress = ft.ProgressBar(visible=False)
     loc_file_picker = ft.FilePicker()
+    loc_dir_picker = ft.FilePicker()
     loc_select_btn = ft.ElevatedButton(icon="upload_file")
+    loc_select_folder_btn = ft.ElevatedButton(icon="folder_open")
+    loc_image_dropdown = ft.Dropdown(visible=False, width=400)
+    loc_manual_btn = ft.IconButton(icon="edit")
 
     # Rewrite Fields
     rw_source = ft.TextField(multiline=True, min_lines=3)
@@ -221,13 +226,17 @@ def main(page: ft.Page):
         lang_switch.label = T("language_switch")
 
         # Localize
-        loc_image_path.value = T("no_image") if not loc_selected_file else loc_selected_file
+        loc_image_path_display.value = f"{T('file_name')}: {Path(loc_selected_file).name}" if loc_selected_file else T("no_image")
+        loc_image_path_input.label = T("image_path")
         loc_select_btn.text = T("select_image")
-        loc_source_text.label = T("source_text")
+        loc_select_folder_btn.text = T("select_folder")
+        loc_image_dropdown.label = T("folder_images")
         loc_target_lang.label = T("target_lang")
         loc_tone.label = T("tone")
         loc_bubble_hint.label = T("bubble_hint")
+        loc_extra_prompt.label = T("extra_prompt")
         loc_run_btn.text = T("run_localize")
+        loc_manual_btn.tooltip = T("manual_input")
         
         # Rewrite
         rw_source.label = T("source_text")
@@ -253,26 +262,98 @@ def main(page: ft.Page):
 
     # Localize Logic
     loc_selected_file: Optional[str] = None
+    loc_images = []
+
+    def set_selected_image(path: str):
+        nonlocal loc_selected_file
+        loc_selected_file = path
+        # Update UI
+        loc_image_path_display.value = f"{T('file_name')}: {Path(path).name}"
+        loc_image_path_input.value = path
+        
+        try:
+            with open(path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("utf-8")
+            loc_preview_image.src_base64 = b64
+            loc_preview_image.src = ""
+            loc_preview_image.visible = True
+        except Exception as e:
+            print(f"Error loading image: {e}")
+            loc_preview_image.visible = False
+
+        if loc_image_dropdown.options:
+            loc_image_dropdown.value = path
+        page.update()
     
     def loc_on_file_picked(e: ft.FilePickerResultEvent):
-        nonlocal loc_selected_file
         if e.files:
-            loc_selected_file = e.files[0].path
-            loc_image_path.value = loc_selected_file
-            loc_preview_image.src = loc_selected_file
-            loc_preview_image.visible = True
-            page.update()
+            set_selected_image(e.files[0].path)
+
+    def loc_on_folder_picked(e: ft.FilePickerResultEvent):
+        nonlocal loc_images
+        if not e.path:
+            return
+        folder = Path(e.path)
+        if not folder.exists():
+            show_error("Folder not found")
+            return
+        suffixes = {".png", ".jpg", ".jpeg", ".webp"}
+        loc_images = sorted([p for p in folder.iterdir() if p.suffix.lower() in suffixes])
+        if not loc_images:
+            show_error("文件夹里没有图片（png/jpg/jpeg/webp）")
+            return
+        loc_image_dropdown.options = [ft.dropdown.Option(str(p)) for p in loc_images]
+        loc_image_dropdown.value = str(loc_images[0])
+        loc_image_dropdown.visible = True
+        set_selected_image(str(loc_images[0]))
+
+    loc_image_dropdown.on_change = lambda e: set_selected_image(e.control.value) if e.control.value else None
 
     loc_file_picker.on_result = loc_on_file_picked
-    page.overlay.append(loc_file_picker)
-    loc_select_btn.on_click = lambda _: loc_file_picker.pick_files(allow_multiple=False)
+    loc_dir_picker.on_result = loc_on_folder_picked
+    # Ensure pickers are registered; overlay has no setter in current Flet.
+    if loc_file_picker not in page.overlay:
+        page.overlay.append(loc_file_picker)
+    if loc_dir_picker not in page.overlay:
+        page.overlay.append(loc_dir_picker)
+    page.update()
+    def on_select_file_click(_):
+        try:
+            loc_file_picker.pick_files(allow_multiple=False)
+        except Exception as ex:
+            show_error(str(ex))
+
+    def on_select_folder_click(_):
+        try:
+            loc_dir_picker.get_directory_path()
+        except Exception as ex:
+            show_error(str(ex))
+
+    loc_select_btn.on_click = on_select_file_click
+    loc_select_folder_btn.on_click = on_select_folder_click
+
+    def toggle_manual_input(e):
+        is_visible = loc_image_path_input.visible
+        loc_image_path_input.visible = not is_visible
+        loc_image_path_display.visible = is_visible # Toggle display
+        
+        page.update() # Update UI first to ensure control is rendered/visible
+        
+        if not is_visible:
+             loc_image_path_input.value = loc_selected_file or ""
+             try:
+                loc_image_path_input.focus()
+             except Exception:
+                pass # Ignore focus errors if control is not ready
+
+    loc_manual_btn.on_click = toggle_manual_input
 
     def run_localize(e):
-        if not loc_selected_file:
+        # Use input value if visible, else selected file
+        current_file = loc_image_path_input.value if loc_image_path_input.visible else loc_selected_file
+
+        if not current_file:
             show_error(T("select_img_first"))
-            return
-        if not loc_source_text.value:
-            show_error(T("enter_text"))
             return
 
         loc_progress.visible = True
@@ -283,15 +364,16 @@ def main(page: ft.Page):
             try:
                 pipeline = app_state.get_pipeline()
                 result = pipeline.localize_panel(
-                    image_path=Path(loc_selected_file or ""),
-                    source_text=loc_source_text.value or "",
+                    image_path=Path(current_file),
+                    source_text=None,  # auto OCR+translate via image model
                     target_language=loc_target_lang.value or "zh",
                     tone=loc_tone.value or "friendly manga voice",
-                    bubble_hint=loc_bubble_hint.value if loc_bubble_hint.value else None
+                    bubble_hint=loc_bubble_hint.value if loc_bubble_hint.value else None,
+                    style_hint=loc_extra_prompt.value if loc_extra_prompt.value else None
                 )
                 loc_result_image.src_base64 = result.edited_image_b64
                 loc_result_image.visible = True
-                loc_result_text.value = f"{T('result')}: {result.rewritten_text}"
+                loc_result_text.value = f"{T('result')}: {result.rewritten_text or '[auto]'}"
                 show_snack(T("complete"))
             except Exception as ex:
                 show_error(str(ex))
@@ -376,18 +458,25 @@ def main(page: ft.Page):
                     content=ft.Column([
                         ft.Text(T("localize"), style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                         build_card("input_group", [
-                            ft.Row([loc_select_btn, ft.Container(loc_image_path, expand=True)]),
-                            loc_source_text,
+                            ft.Row([
+                                loc_select_btn, 
+                                loc_select_folder_btn,
+                                loc_manual_btn,
+                                ft.Container(loc_image_path_display, padding=ft.padding.only(left=10), expand=True),
+                                loc_image_path_input
+                            ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                            loc_image_dropdown,
                             ft.Row([loc_target_lang, loc_tone]), # Row 1
-                            loc_bubble_hint,                     # Row 2 (Full width)
-                            loc_run_btn,
+                            ft.Row([loc_bubble_hint], expand=True), # Row 2 (Full width)
+                            loc_extra_prompt,
+                            ft.Row([loc_run_btn], alignment=ft.MainAxisAlignment.END),
                             loc_progress
                         ]),
                         build_card("output_group", [
                             ft.ResponsiveRow([
                                 ft.Column([ft.Text(T("original")), loc_preview_image], col={"sm": 12, "md": 6}),
                                 ft.Column([ft.Text(T("result")), loc_result_image, loc_result_text], col={"sm": 12, "md": 6}),
-                            ])
+                            ]),
                         ])
                     ]),
                     padding=20
@@ -449,4 +538,4 @@ def main(page: ft.Page):
     )
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.app(target=main, view=ft.AppView.FLET_APP)
