@@ -40,7 +40,12 @@ jobs:
       - name: Sync deps
         run: uv sync
 
-      - name: Package app
+      - name: Package app (macOS)
+        if: runner.os == 'macOS'
+        run: uv run flet pack app_ui.py --name NyaManga
+
+      - name: Package app (Windows/Linux)
+        if: runner.os != 'macOS'
         run: uv run flet pack app_ui.py --name NyaManga --onedir
 
       - name: Archive artifact
