@@ -10,6 +10,8 @@ dependencies = [
     "requests>=2.31.0",
     # Desktop/web extras included so Flet won't try auto-install.
     "flet[all]==0.28.3",
+    # Packaging tool for flet pack / PyInstaller bundling
+    "pyinstaller>=6.0",
 ]
 
 [project.scripts]

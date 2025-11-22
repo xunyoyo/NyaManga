@@ -55,6 +55,20 @@ with TypesettingPipeline(cfg) as pipeline:
 uv run app_ui.py
 ```
 
+## 桌面打包 (macOS/Windows)
+```bash
+# 打包，生成可执行/应用在 dist/
+uv run flet pack app_ui.py --name NyaManga
+```
+> 如需自定义图标，追加 `--icon assets/icon.png`（自行准备 PNG/ICO）。  
+> 若提示缺少 PyInstaller，先 `uv sync`（已在依赖里）。
+
+### CI/CD 自动打包发布
+- 已提供 GitHub Actions 工作流 `.github/workflows/release.yml`：
+  - 触发：推送 `v*` 标签时自动在 macOS/Windows/Linux 上用 `uv sync` + `flet pack --onedir` 构建。
+  - 生成的二进制（压缩包）会作为 release 资产上传。
+- 使用方法：本地打 tag 并推送：`git tag v0.1.0 && git push origin v0.1.0`，等待 Actions 完成后在 Releases 页面下载对应平台包。
+
 ### UI 对接面向接口
 - `MangaEmbedder.rewrite_dialogue(text, target_language, tone)`：仅返回改写后的文本
 - `MangaEmbedder.embed_text(image_path, text, bubble_hint=None, mask_path=None)`：返回编辑后图片的 base64
